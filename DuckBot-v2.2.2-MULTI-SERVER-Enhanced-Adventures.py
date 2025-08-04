@@ -269,21 +269,23 @@ async def add_to_queue(interaction: discord.Interaction, prompt: str, generation
         
         if position == 1 and not server_queue['currently_processing']:
             # Start processing immediately
-            queue_item.status_message = await interaction.followup.send(
-                f"🚀 **Starting {generation_type} generation**\n"
-                f"Prompt: `{prompt}`\n"
-                f"⚡ Processing now..."
+            await interaction.edit_original_response(
+                content=f"🚀 **Starting {generation_type} generation**\n"
+                        f"Prompt: `{prompt}`\n"
+                        f"⚡ Processing now..."
             )
+            queue_item.status_message = interaction
         else:
             # Show queue position and estimated wait time
             wait_time = calculate_estimated_wait(position, generation_type)
             wait_str = f"\n⏱️ Estimated wait: {format_time(wait_time)}" if wait_time > 0 else ""
             
-            queue_item.status_message = await interaction.followup.send(
-                f"📍 **{generation_type.title()} generation queued**\n"
-                f"Prompt: `{prompt}`\n"
-                f"Position {position} in queue{wait_str}"
+            await interaction.edit_original_response(
+                content=f"📍 **{generation_type.title()} generation queued**\n"
+                        f"Prompt: `{prompt}`\n"
+                        f"Position {position} in queue{wait_str}"
             )
+            queue_item.status_message = interaction
     
     # Start processing if not already running
     if not server_queue['currently_processing']:
@@ -311,7 +313,7 @@ async def process_server_queue(server_id: int):
                 elif current_item.generation_type == "video":
                     await process_video_generation(current_item)
             except Exception as e:
-                await current_item.status_message.edit(
+                await current_item.status_message.edit_original_response(
                     content=f"❌ **{current_item.generation_type.title()} generation error**\n"
                            f"Prompt: `{current_item.prompt}`\n"
                            f"Error: {str(e)[:100]}..."
@@ -365,7 +367,7 @@ async def process_image_generation(queue_item):
         prompt_workflow["6"]["inputs"]["seed"] = torch.randint(1, 1125899906842624, (1,)).item()
         
         # Update status
-        await queue_item.status_message.edit(
+        await queue_item.status_message.edit_original_response(
             content=f"🎨 **Generating image**\nPrompt: `{queue_item.prompt}`\n⚡ Processing..."
         )
         
@@ -375,7 +377,7 @@ async def process_image_generation(queue_item):
         print(f"📊 ComfyUI returned {len(images_data) if images_data else 0} images")
         
         if not images_data:
-            await queue_item.status_message.edit(
+            await queue_item.status_message.edit_original_response(
                 content=f"❌ **Image generation failed**\nPrompt: `{queue_item.prompt}`"
             )
             return
@@ -387,14 +389,14 @@ async def process_image_generation(queue_item):
         await queue_item.interaction.followup.send(files=image_files)
         
         # Then update status message 
-        await queue_item.status_message.edit(content=f"✅ **Image generation complete!**\nPrompt: `{queue_item.prompt}`")
+        await queue_item.status_message.edit_original_response(content=f"✅ **Image generation complete!**\nPrompt: `{queue_item.prompt}`")
         
         # Update average time
         actual_time = time.time() - start_time
         update_average_time("image", actual_time)
         
     except Exception as e:
-        await queue_item.status_message.edit(
+        await queue_item.status_message.edit_original_response(
             content=f"❌ **Image generation error**\nPrompt: `{queue_item.prompt}`\nError: {str(e)[:100]}..."
         )
 
@@ -414,7 +416,7 @@ async def process_video_generation(queue_item):
         prompt_workflow["6"]["inputs"]["seed"] = torch.randint(1, 1125899906842624, (1,)).item()
         
         # Update status
-        await queue_item.status_message.edit(
+        await queue_item.status_message.edit_original_response(
             content=f"🎬 **Generating video**\nPrompt: `{queue_item.prompt}`\n⚡ Processing... (this may take a while)"
         )
         
@@ -422,7 +424,7 @@ async def process_video_generation(queue_item):
         frame_data_list = await run_comfyui_workflow(prompt_workflow, is_video=True)
         
         if not frame_data_list:
-            await queue_item.status_message.edit(
+            await queue_item.status_message.edit_original_response(
                 content=f"❌ **Video generation failed**\nPrompt: `{queue_item.prompt}`"
             )
             return
@@ -435,12 +437,12 @@ async def process_video_generation(queue_item):
             video_filename = f"generated_video_{uuid.uuid4()}.mp4"
             video_file = discord.File(fp=BytesIO(video_data), filename=video_filename)
             
-            await queue_item.status_message.edit(
+            await queue_item.status_message.edit_original_response(
                 content=f"✅ **Video generation complete!**\nPrompt: `{queue_item.prompt}`\n🎬 Duration: 10 seconds"
             )
             await queue_item.interaction.followup.send(files=[video_file])
         else:
-            await queue_item.status_message.edit(
+            await queue_item.status_message.edit_original_response(
                 content=f"❌ **Video processing failed**\nPrompt: `{queue_item.prompt}`"
             )
         
@@ -449,7 +451,7 @@ async def process_video_generation(queue_item):
         update_average_time("video", actual_time)
         
     except Exception as e:
-        await queue_item.status_message.edit(
+        await queue_item.status_message.edit_original_response(
             content=f"❌ **Video generation error**\nPrompt: `{queue_item.prompt}`\nError: {str(e)[:100]}..."
         )
 
@@ -1405,7 +1407,7 @@ async def enhanced_process_image_generation(queue_item, model_id: str = None):
         prompt_workflow = await load_workflow_for_model(model_id)
         
         if not prompt_workflow:
-            await queue_item.status_message.edit(
+            await queue_item.status_message.edit_original_response(
                 content=f"❌ Error loading {model_info['name']} workflow"
             )
             return
@@ -1418,7 +1420,7 @@ async def enhanced_process_image_generation(queue_item, model_id: str = None):
         prompt_workflow[seed_node]["inputs"]["seed"] = torch.randint(1, 1125899906842624, (1,)).item()
         
         # Update status with model info
-        await queue_item.status_message.edit(
+        await queue_item.status_message.edit_original_response(
             content=f"🎨 **Generating with {model_info['name']}**\n"
                    f"Prompt: `{queue_item.prompt}`\n"
                    f"⚡ {model_info['speed']} | 📐 {model_info['resolution']}"
@@ -1428,7 +1430,7 @@ async def enhanced_process_image_generation(queue_item, model_id: str = None):
         images_data = await run_comfyui_workflow(prompt_workflow, is_video=False)
         
         if not images_data:
-            await queue_item.status_message.edit(
+            await queue_item.status_message.edit_original_response(
                 content=f"❌ **{model_info['name']} generation failed**\nPrompt: `{queue_item.prompt}`"
             )
             return
@@ -1451,14 +1453,14 @@ async def enhanced_process_image_generation(queue_item, model_id: str = None):
             raise discord_error
         
         # Then update status message
-        await queue_item.status_message.edit(content=f"✅ **{model_info['name']} generation complete!**\nPrompt: `{queue_item.prompt}`")
+        await queue_item.status_message.edit_original_response(content=f"✅ **{model_info['name']} generation complete!**\nPrompt: `{queue_item.prompt}`")
         
         # Update average time
         actual_time = time.time() - start_time
         update_average_time("image", actual_time)
         
     except Exception as e:
-        await queue_item.status_message.edit(
+        await queue_item.status_message.edit_original_response(
             content=f"❌ **{model_info['name']} generation error**\n"
                    f"Prompt: `{queue_item.prompt}`\n"
                    f"Error: {str(e)[:100]}..."
@@ -1685,7 +1687,7 @@ async def process_ask_queue(server_id: int):
             except Exception as e:
                 print(f"Error processing ask queue: {e}")
                 try:
-                    await current_item.status_message.edit(content=f"❌ An unexpected error occurred.")
+                    await current_item.status_message.edit_original_response(content=f"❌ An unexpected error occurred.")
                 except:
                     pass # Ignore if message can't be edited
     finally:
@@ -1716,7 +1718,7 @@ async def process_enhanced_queue(server_id: int):
                     await process_video_generation(current_item)
             except Exception as e:
                 model_name = IMAGE_MODELS.get(getattr(current_item, 'model_id', 'sd15'), {}).get('name', 'Unknown')
-                await current_item.status_message.edit(
+                await current_item.status_message.edit_original_response(
                     content=f"❌ **{model_name} generation failed**\n"
                            f"Prompt: `{current_item.prompt}`\n"
                            f"Error: {str(e)[:100]}..."
@@ -2072,13 +2074,13 @@ async def process_ask_generation(queue_item: QueueItem):
     
     try:
         # Update status message
-        await queue_item.status_message.edit(content=f"🧠 **Thinking...**\nPrompt: `{prompt}`\n🔍 Checking AI model status...")
+        await queue_item.status_message.edit_original_response(content=f"🧠 **Thinking...**\nPrompt: `{prompt}`\n🔍 Checking AI model status...")
 
         # Check LM Studio health first
         health_check = await check_lm_studio_health()
         if not health_check:
             fallback_msg = await get_fallback_response(prompt, user_name)
-            await queue_item.status_message.edit(content=fallback_msg)
+            await queue_item.status_message.edit_original_response(content=fallback_msg)
             return
 
         # Build payload - respect LM Studio's system prompt if configured
@@ -2106,7 +2108,7 @@ Be helpful, concise, and engaging. Keep responses under 1500 characters when pos
             "stream": False
         }
         
-        await queue_item.status_message.edit(content=f"🧠 **Thinking...**\nPrompt: `{prompt}`\n🤖 Sending request to AI...")
+        await queue_item.status_message.edit_original_response(content=f"🧠 **Thinking...**\nPrompt: `{prompt}`\n🤖 Sending request to AI...")
         
         # Attempt to call LM Studio
         data = await call_lm_studio_with_retry(base_payload)
@@ -2118,23 +2120,23 @@ Be helpful, concise, and engaging. Keep responses under 1500 characters when pos
                 # Handle long responses by editing original message
                 if len(ai_response) > 2000:
                     chunks = [ai_response[i:i+1900] for i in range(0, len(ai_response), 1900)]
-                    await queue_item.status_message.edit(content=chunks[0])
+                    await queue_item.status_message.edit_original_response(content=chunks[0])
                     for chunk in chunks[1:]:
                         await interaction.followup.send(chunk)
                 else:
-                    await queue_item.status_message.edit(content=ai_response)
+                    await queue_item.status_message.edit_original_response(content=ai_response)
             else:
                 fallback_msg = await get_fallback_response(prompt, user_name)
-                await queue_item.status_message.edit(content=fallback_msg)
+                await queue_item.status_message.edit_original_response(content=fallback_msg)
         else:
             fallback_msg = await get_fallback_response(prompt, user_name)
-            await queue_item.status_message.edit(content=fallback_msg)
+            await queue_item.status_message.edit_original_response(content=fallback_msg)
             
     except Exception as e:
         print(f"Error processing ask generation: {e}")
         try:
             fallback_msg = await get_fallback_response(prompt, user_name)
-            await queue_item.status_message.edit(content=fallback_msg)
+            await queue_item.status_message.edit_original_response(content=fallback_msg)
         except: # Ignore if we can't edit the message
             pass
 
@@ -2173,7 +2175,7 @@ async def enhanced_ask_command_multi_server(interaction: discord.Interaction, pr
 
             # Update message if we're not first in queue
             if position > 1 or ask_queue['currently_processing']:
-                await queue_item.status_message.edit(
+                await queue_item.status_message.edit_original_response(
                     content=f"📍 **Question queued**\nPrompt: `{prompt}`\nPosition {position} in queue{wait_str}"
                 )
                 
@@ -2428,13 +2430,21 @@ async def ping_command(interaction: discord.Interaction):
 @bot.tree.command(name="generate", description="Generate an image using ComfyUI.")
 @app_commands.describe(prompt="The prompt for the image.")
 async def generate_command(interaction: discord.Interaction, prompt: str):
-    await interaction.response.defer(ephemeral=False)
+    # Respond immediately to avoid timeout
+    await interaction.response.send_message(
+        f"🎨 **Image Generation Request**\nPrompt: `{prompt}`\n🔄 Adding to queue...",
+        ephemeral=False
+    )
     await add_to_queue(interaction, prompt, "image")
 
 @bot.tree.command(name="animate", description="Generate a video using ComfyUI and W.A.N 2.2.")
 @app_commands.describe(prompt="The prompt for the video.")
 async def animate_command(interaction: discord.Interaction, prompt: str):
-    await interaction.response.defer(ephemeral=False)
+    # Respond immediately to avoid timeout
+    await interaction.response.send_message(
+        f"🎬 **Video Generation Request**\nPrompt: `{prompt}`\n🔄 Adding to queue...",
+        ephemeral=False
+    )
     await add_to_queue(interaction, prompt, "video")
 
 @bot.tree.command(name="server_stats", description="Get social analytics about this Discord server")
