@@ -4175,10 +4175,14 @@ async def idea_connections_command(interaction: discord.Interaction, current_ide
 @app_commands.describe(prompt="Your question or request")
 async def ask_enhanced_command(interaction: discord.Interaction, prompt: str):
     """Enhanced ask command with personal memory context."""
-    await interaction.response.defer(ephemeral=False)
+    # Respond immediately to avoid timeout
+    await interaction.response.send_message(
+        f"🧠 **Enhanced AI with Memory...**\nPrompt: `{prompt}`\n🔍 Loading your memories...",
+        ephemeral=False
+    )
     
     if not NEO4J_ENABLED:
-        await interaction.followup.send("❌ Enhanced ask requires Neo4j database for memory context")
+        await interaction.edit_original_response(content="❌ Enhanced ask requires Neo4j database for memory context")
         return
     
     user_id = interaction.user.id
@@ -4189,7 +4193,7 @@ async def ask_enhanced_command(interaction: discord.Interaction, prompt: str):
     # Check LM Studio health first
     if not await check_lm_studio_health():
         fallback_msg = await get_fallback_response(prompt, user_name)
-        await interaction.followup.send(fallback_msg)
+        await interaction.edit_original_response(content=fallback_msg)
         return
     
     try:
@@ -4245,19 +4249,19 @@ Keep responses under 1500 characters when possible."""
             # Handle long responses
             if len(ai_response) > 2000:
                 chunks = [ai_response[i:i+1900] for i in range(0, len(ai_response), 1900)]
-                await interaction.followup.send(chunks[0])
+                await interaction.edit_original_response(content=chunks[0])
                 for chunk in chunks[1:]:
                     await interaction.followup.send(chunk)
             else:
-                await interaction.followup.send(ai_response)
+                await interaction.edit_original_response(content=ai_response)
         else:
             fallback_msg = await get_fallback_response(prompt, user_name)
-            await interaction.followup.send(fallback_msg)
+            await interaction.edit_original_response(content=fallback_msg)
     
     except Exception as e:
         print(f"Enhanced ask command error: {e}")
         fallback_msg = await get_fallback_response(prompt, user_name)
-        await interaction.followup.send(fallback_msg)
+        await interaction.edit_original_response(content=fallback_msg)
 
 print("✅ ALL enhanced commands loaded!")
 print("📋 Total commands: 28")
