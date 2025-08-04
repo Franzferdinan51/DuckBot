@@ -35,9 +35,9 @@
   "6": {
     "inputs": {
       "seed": 42,
-      "steps": 25,
-      "cfg": 7.0,
-      "sampler_name": "dpmpp_2m",
+      "steps": 50,
+      "cfg": 8.0,
+      "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
       "denoise": 1.0,
       "model": [
@@ -64,7 +64,7 @@
   },
   "7": {
     "inputs": {
-      "text": "blurry, low quality, watermark, text, bad anatomy, deformed, pixelated, noise, artifacts",
+      "text": "blurry, low quality, watermark, text, bad anatomy, deformed, pixelated, noise, artifacts, low resolution, compressed, grainy, distorted, ugly, bad composition, jpeg artifacts, oversaturated, undersaturated, overexposed, underexposed, plastic, artificial, fake, duplicate, mutation, disfigured, extra limbs, missing limbs, poorly drawn hands, poorly drawn face, bad proportions, out of frame, cropped, worst quality, low quality, normal quality",
       "clip": [
         "4",
         1
@@ -103,11 +103,11 @@
   "10": {
     "inputs": {
       "seed": 42,
-      "steps": 15,
-      "cfg": 7.0,
-      "sampler_name": "dpmpp_2m",
+      "steps": 30,
+      "cfg": 8.0,
+      "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
-      "denoise": 0.3,
+      "denoise": 0.35,
       "model": [
         "9",
         0

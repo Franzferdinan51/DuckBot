@@ -27,8 +27,8 @@
   },
   "5": {
     "inputs": {
-      "width": 768,
-      "height": 768,
+      "width": 1024,
+      "height": 1024,
       "batch_size": 1
     },
     "class_type": "EmptyLatentImage",
@@ -39,9 +39,9 @@
   "6": {
     "inputs": {
       "seed": 856553863944838,
-      "steps": 20,
-      "cfg": 7.0,
-      "sampler_name": "dpmpp_3m_sde",
+      "steps": 50,
+      "cfg": 8.5,
+      "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
       "denoise": 1,
       "model": [
@@ -68,7 +68,7 @@
   },
   "7": {
     "inputs": {
-      "text": "blurry, low quality, watermark, text, poor lighting, bad anatomy, deformed, pixelated, noise, artifacts, low resolution, compressed, grainy, distorted, ugly, bad composition",
+      "text": "blurry, low quality, watermark, text, poor lighting, bad anatomy, deformed, pixelated, noise, artifacts, low resolution, compressed, grainy, distorted, ugly, bad composition, jpeg artifacts, oversaturated, undersaturated, overexposed, underexposed, plastic, artificial, fake, duplicate, mutation, disfigured, extra limbs, missing limbs, poorly drawn hands, poorly drawn face, bad proportions, out of frame, cropped, worst quality, low quality, normal quality",
       "clip": [
         "4",
         0
