@@ -35,10 +35,10 @@
   "6": {
     "inputs": {
       "seed": 42,
-      "steps": 25,
-      "cfg": 3.5,
-      "sampler_name": "euler",
-      "scheduler": "simple",
+      "steps": 50,
+      "cfg": 5.0,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
       "denoise": 1.0,
       "model": [
         "4",

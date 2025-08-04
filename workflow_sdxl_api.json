@@ -35,8 +35,8 @@
   "6": {
     "inputs": {
       "seed": 42,
-      "steps": 50,
-      "cfg": 8.0,
+      "steps": 100,
+      "cfg": 10.0,
       "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
       "denoise": 1.0,
@@ -103,11 +103,11 @@
   "10": {
     "inputs": {
       "seed": 42,
-      "steps": 30,
-      "cfg": 8.0,
+      "steps": 50,
+      "cfg": 10.0,
       "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
-      "denoise": 0.35,
+      "denoise": 0.40,
       "model": [
         "9",
         0

@@ -121,7 +121,7 @@ def queue_prompt(prompt_workflow):
         p = {"prompt": prompt_workflow, "client_id": CLIENT_ID}
         data = json.dumps(p).encode('utf-8')
         req = urllib.request.Request(f"http://{COMFYUI_SERVER_ADDRESS}/prompt", data=data)
-        return json.loads(urllib.request.urlopen(req).read())
+        return json.loads(urllib.request.urlopen(req, timeout=360).read())
     except Exception as e:
         print(f"Error queueing prompt: {e}")
         return None
@@ -130,7 +130,7 @@ def get_image(filename, subfolder, folder_type):
     try:
         data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
         url_values = urllib.parse.urlencode(data)
-        with urllib.request.urlopen(f"http://{COMFYUI_SERVER_ADDRESS}/view?{url_values}") as response:
+        with urllib.request.urlopen(f"http://{COMFYUI_SERVER_ADDRESS}/view?{url_values}", timeout=360) as response:
             return response.read()
     except Exception as e:
         print(f"Error getting image: {e}")
@@ -138,7 +138,7 @@ def get_image(filename, subfolder, folder_type):
 
 def get_history(prompt_id):
     try:
-        with urllib.request.urlopen(f"http://{COMFYUI_SERVER_ADDRESS}/history/{prompt_id}") as response:
+        with urllib.request.urlopen(f"http://{COMFYUI_SERVER_ADDRESS}/history/{prompt_id}", timeout=360) as response:
             return json.loads(response.read())
     except Exception as e:
         print(f"Error getting history: {e}")
@@ -175,7 +175,7 @@ async def run_comfyui_workflow(workflow_data: dict, is_video: bool = False) -> l
         uri = f"ws://{COMFYUI_SERVER_ADDRESS}/ws?clientId={CLIENT_ID}"
         print(f"🔌 Connecting to WebSocket: {uri}")
         
-        async with websockets.connect(uri) as ws:
+        async with websockets.connect(uri, ping_timeout=360, close_timeout=360) as ws:
             print("✅ WebSocket connected successfully")
             
             # Use the working image retrieval method
@@ -2358,7 +2358,7 @@ async def comfyui_health_command(interaction: discord.Interaction):
     
     # Test basic HTTP connection
     try:
-        response = requests.get(f"http://{COMFYUI_SERVER_ADDRESS}/", timeout=5)
+        response = requests.get(f"http://{COMFYUI_SERVER_ADDRESS}/", timeout=360)
         http_status = "✅ Connected" if response.status_code == 200 else f"⚠️ HTTP {response.status_code}"
         http_color = 0x00ff00 if response.status_code == 200 else 0xff9900
     except Exception as e:
@@ -2389,7 +2389,7 @@ async def comfyui_health_command(interaction: discord.Interaction):
     model_status = "Not checked"
     if "✅" in http_status:
         try:
-            models_response = requests.get(f"http://{COMFYUI_SERVER_ADDRESS}/object_info", timeout=5)
+            models_response = requests.get(f"http://{COMFYUI_SERVER_ADDRESS}/object_info", timeout=360)
             if models_response.status_code == 200:
                 model_info = models_response.json()
                 # Count checkpoints
