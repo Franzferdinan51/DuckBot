@@ -1,0 +1,125 @@
+{
+  "6": {
+    "inputs": {
+      "text": "a cat driving a car",
+      "clip": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "7": {
+    "inputs": {
+      "text": "blurry, low quality, watermark, text",
+      "clip": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "8": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "video_frames": 24,
+      "controller": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "T2V_Preprocessor"
+  },
+  "9": {
+    "inputs": {
+      "seed": 42,
+      "steps": 25,
+      "cfg": 7,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1,
+      "low_noise_model_ratio": 0.5,
+      "model": [
+        "16",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "vae": [
+        "13",
+        0
+      ],
+      "latent": [
+        "8",
+        0
+      ],
+      "t2v_preprocessor": [
+        "8",
+        1
+      ]
+    },
+    "class_type": "T2V_KSampler"
+  },
+  "10": {
+    "inputs": {
+      "samples": [
+        "9",
+        0
+      ],
+      "vae": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "VAEDecode"
+  },
+  "11": {
+    "inputs": {
+      "frame_rate": 8,
+      "loop_count": 0,
+      "filename_prefix": "WAN2.2_Video",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 20,
+      "save_metadata": true,
+      "pingpong": false,
+      "images": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine"
+  },
+  "12": {
+    "inputs": {
+      "ckpt_name": "v1-5-pruned-emaonly-fp16.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "13": {
+    "inputs": {
+      "vae_name": "sd-vae-ft-mse.safetensors"
+    },
+    "class_type": "VAELoader"
+  },
+  "15": {
+    "inputs": {
+      "controller_name": "wan2.2_controller_fp16.safetensors"
+    },
+    "class_type": "T2VControllerLoader"
+  },
+  "16": {
+    "inputs": {
+      "high_noise_model_name": "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+      "low_noise_model_name": "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"
+    },
+    "class_type": "T2V_Efficient_Loader"
+  }
+}

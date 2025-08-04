@@ -1,0 +1,22 @@
+DuckBot-Portable.zip Contents:
+
+✓ DuckBot-v1.2VID.py          - Main bot application (39KB)
+✓ workflow_api.json           - ComfyUI image generation workflow (2KB)  
+✓ workflow_video_api.json     - ComfyUI video generation workflow (3KB)
+✓ requirements.txt            - Python dependencies list (299 bytes)
+✓ .env.example               - Environment configuration template (493 bytes)
+✓ CLAUDE.md                  - Developer documentation (5KB)
+✓ SETUP.md                   - Quick setup instructions (3KB)
+
+Total: 7 essential files for portable DuckBot deployment
+
+Features included:
+- Discord slash commands (/ping, /generate, /animate, /ask)
+- ComfyUI integration for AI image/video generation
+- Queue system with position tracking
+- LM Studio integration with multi-plugin support  
+- Optional Neo4j social analytics (when enabled)
+- Storage management with automatic cleanup
+- Complete error handling and logging
+
+Simply extract, install requirements, configure .env, and run!
