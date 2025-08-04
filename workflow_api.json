@@ -86,8 +86,8 @@
         0
       ],
       "vae": [
-        "15",
-        2
+        "16",
+        0
       ]
     },
     "class_type": "VAEDecode",
@@ -115,6 +115,15 @@
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
       "title": "Load Checkpoint - SD3.5 Large FP8"
+    }
+  },
+  "16": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load High-Quality VAE"
     }
   }
 }
