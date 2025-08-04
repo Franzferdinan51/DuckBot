@@ -10,7 +10,7 @@ DuckBot is a multi-server Discord bot with AI chat, image/video generation, soci
 
 ### Main Components
 
-- **DuckBot-v2.2.2-MULTI-SERVER-Enhanced-Adventures.py**: Current production bot with full feature set and enhanced adventure system
+- **DuckBot-v2.2.3-MULTI-SERVER-Enhanced-Adventures.py**: Latest production bot with ultra-high quality image generation, improved error handling, and enhanced VAE support
 - **enhanced_ask_command.py**: LM Studio AI chat with progressive fallback system
 - **enhanced_image_generation.py**: Multi-model image generation (FLUX.1, SDXL, SD1.5)
 - **enhanced_image_integration.py**: Advanced image generation with style presets
@@ -66,7 +66,7 @@ The bot uses:
 
 ### Running the Bot
 ```bash
-python DuckBot-v2.2.2-MULTI-SERVER-Enhanced-Adventures.py
+python DuckBot-v2.2.3-MULTI-SERVER-Enhanced-Adventures.py
 ```
 
 ### Service Dependencies
