@@ -2143,11 +2143,8 @@ async def enhanced_ask_command_multi_server(interaction: discord.Interaction, pr
     print(f"🔍 Guild: {interaction.guild.name if interaction.guild else 'DM'}")
     print(f"🔍 Prompt: {prompt}")
     
-    # Respond immediately to avoid timeout
-    await interaction.response.send_message(
-        f"🧠 **Processing your question...**\nPrompt: `{prompt}`\n⚡ Starting AI conversation...", 
-        ephemeral=False
-    )
+    # Defer the response to avoid timeout
+    await interaction.response.defer(ephemeral=False)
     
     # Handle DMs by using user ID as server ID
     server_id = interaction.guild.id if interaction.guild else interaction.user.id
@@ -2165,14 +2162,17 @@ async def enhanced_ask_command_multi_server(interaction: discord.Interaction, pr
         wait_str = f"\n⏱️ Estimated wait: {format_time(wait_time)}" if wait_time > 0 else ""
 
         if position == 1 and not ask_queue['currently_processing']:
-            # Use original response for immediate processing
-            queue_item.status_message = await interaction.original_response()
-        else:
-            # Update original response for queued items
-            await interaction.edit_original_response(
-                content=f"📍 **Question queued**\nPrompt: `{prompt}`\nPosition {position} in queue{wait_str}"
+            # Send initial status message
+            queue_item.status_message = await interaction.followup.send(
+                f"🧠 **Processing your question...**\nPrompt: `{prompt}`\n⚡ Starting AI conversation...",
+                wait=True
             )
-            queue_item.status_message = await interaction.original_response()
+        else:
+            # Send queued message
+            queue_item.status_message = await interaction.followup.send(
+                f"📍 **Question queued**\nPrompt: `{prompt}`\nPosition {position} in queue{wait_str}",
+                wait=True
+            )
             
     if not ask_queue['currently_processing']:
         asyncio.create_task(process_ask_queue(server_id))
