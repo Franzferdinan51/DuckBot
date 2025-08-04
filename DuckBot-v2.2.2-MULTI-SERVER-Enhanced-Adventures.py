@@ -42,6 +42,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 # --- API URLs ---
 LM_STUDIO_URL = "http://127.0.0.1:1234/v1/chat/completions"
 LM_STUDIO_MODEL = os.getenv("LM_STUDIO_MODEL", "auto")  # auto = detect or use default
+USE_LM_STUDIO_SYSTEM_PROMPT = os.getenv("USE_LM_STUDIO_SYSTEM_PROMPT", "true").lower() == "true"
 COMFYUI_SERVER_ADDRESS = "127.0.0.1:8188"
 
 # --- NEO4J DATABASE CONFIGURATION ---
@@ -1762,7 +1763,7 @@ async def get_lm_studio_model() -> Optional[str]:
     
     try:
         # Try to get model info from LM Studio
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=180)) as session:
             async with session.get("http://127.0.0.1:1234/v1/models") as response:
                 if response.status == 200:
                     data = await response.json()
@@ -1820,16 +1821,15 @@ async def check_lm_studio_health() -> bool:
     try:
         print(f"🏥 Testing connection to {LM_STUDIO_URL}")
         
-        # Get model for health check
-        model = await get_lm_studio_model()
-        health_payload = build_lm_studio_payload(
-            messages=[{"role": "user", "content": "hi"}],
-            temperature=0,
-            max_tokens=5,
-            model=model
-        )
+        # Simple health check payload without model detection
+        health_payload = {
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 5,
+            "temperature": 0,
+            "stream": False
+        }
         
-        timeout = aiohttp.ClientTimeout(total=10)  # Reasonable timeout for health check
+        timeout = aiohttp.ClientTimeout(total=180)  # 3 minute timeout for health check
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
                 LM_STUDIO_URL,
@@ -1849,7 +1849,7 @@ async def call_lm_studio_with_retry(payload: Dict[str, Any], max_retries: int = 
     if "plugins" in payload:
         try:
             print(f"🔄 Attempting LM Studio call (with plugins)...")
-            timeout = aiohttp.ClientTimeout(total=30)  # Shorter timeout for plugin attempt
+            timeout = aiohttp.ClientTimeout(total=180)  # 3 minute timeout for plugin attempt
             
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.post(
@@ -1874,7 +1874,7 @@ async def call_lm_studio_with_retry(payload: Dict[str, Any], max_retries: int = 
     
     try:
         print(f"🔄 Attempting LM Studio call (no plugins)...")
-        timeout = aiohttp.ClientTimeout(total=60)  # Extended timeout for slower responses
+        timeout = aiohttp.ClientTimeout(total=180)  # 3 minute timeout for slower responses
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
@@ -1892,7 +1892,7 @@ async def call_lm_studio_with_retry(payload: Dict[str, Any], max_retries: int = 
                     print(f"❌ LM Studio failed: {response.status}")
                     
     except asyncio.TimeoutError:
-        print("⏰ LM Studio timeout (60s)")
+        print("⏰ LM Studio timeout (3 minutes)")
     except Exception as e:
         print(f"❌ LM Studio error: {e}")
     
@@ -2081,27 +2081,30 @@ async def process_ask_generation(queue_item: QueueItem):
             await queue_item.status_message.edit(content=fallback_msg)
             return
 
-        # Build the payload with model auto-detection and plugins
-        model = await get_lm_studio_model()
-        base_payload = build_lm_studio_payload(
-            messages=[
-                {
-                    "role": "system",
-                    "content": f"""You are DuckBot, a helpful AI assistant for Discord. 
+        # Build payload - respect LM Studio's system prompt if configured
+        messages = []
+        
+        if not USE_LM_STUDIO_SYSTEM_PROMPT:
+            # Use bot's system prompt
+            messages.append({
+                "role": "system",
+                "content": f"""You are DuckBot, a helpful AI assistant for Discord. 
 The user\'s name is {user_name} and they\'re on the \"{server_name}\" server.
-Be helpful, concise, and engaging. If you need to use tools or search for information, do so when appropriate. 
-Keep responses under 1500 characters when possible to fit Discord\'s message limits well."""
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.7,
-            max_tokens=800,
-            model=model,
-            enable_plugins=True  # Enable plugins with fallback
-        )
+Be helpful, concise, and engaging. Keep responses under 1500 characters when possible to fit Discord\'s message limits well."""
+            })
+        
+        # Add user message
+        messages.append({
+            "role": "user", 
+            "content": f"[User: {user_name} on server: {server_name}] {prompt}"
+        })
+        
+        base_payload = {
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 800,
+            "stream": False
+        }
         
         await queue_item.status_message.edit(content=f"🧠 **Thinking...**\nPrompt: `{prompt}`\n🤖 Sending request to AI...")
         
@@ -2143,39 +2146,54 @@ async def enhanced_ask_command_multi_server(interaction: discord.Interaction, pr
     print(f"🔍 Guild: {interaction.guild.name if interaction.guild else 'DM'}")
     print(f"🔍 Prompt: {prompt}")
     
-    # Defer the response to avoid timeout
-    await interaction.response.defer(ephemeral=False)
-    
-    # Handle DMs by using user ID as server ID
-    server_id = interaction.guild.id if interaction.guild else interaction.user.id
-    ask_queue = get_ask_queue(server_id)
-    queue_item = QueueItem(interaction, prompt, "ask", server_id)
-    
-    async with ask_queue['lock']:
-        ask_queue['queue'].append(queue_item)
-        position = len(ask_queue['queue'])
+    try:
+        # Respond immediately with simple message to avoid timeout
+        await interaction.response.send_message(
+            f"🧠 **Processing your question...**\nPrompt: `{prompt}`\n⚡ Starting AI conversation...",
+            ephemeral=False
+        )
         
-        if 'ask' not in AVERAGE_TIMES:
-            AVERAGE_TIMES['ask'] = 10.0
-
-        wait_time = calculate_estimated_wait(position, "ask")
-        wait_str = f"\n⏱️ Estimated wait: {format_time(wait_time)}" if wait_time > 0 else ""
-
-        if position == 1 and not ask_queue['currently_processing']:
-            # Send initial status message
-            queue_item.status_message = await interaction.followup.send(
-                f"🧠 **Processing your question...**\nPrompt: `{prompt}`\n⚡ Starting AI conversation...",
-                wait=True
-            )
-        else:
-            # Send queued message
-            queue_item.status_message = await interaction.followup.send(
-                f"📍 **Question queued**\nPrompt: `{prompt}`\nPosition {position} in queue{wait_str}",
-                wait=True
-            )
+        # Handle DMs by using user ID as server ID
+        server_id = interaction.guild.id if interaction.guild else interaction.user.id
+        ask_queue = get_ask_queue(server_id)
+        queue_item = QueueItem(interaction, prompt, "ask", server_id)
+        
+        # Get the message we just sent to use for updates
+        queue_item.status_message = await interaction.original_response()
+        
+        async with ask_queue['lock']:
+            ask_queue['queue'].append(queue_item)
+            position = len(ask_queue['queue'])
             
-    if not ask_queue['currently_processing']:
-        asyncio.create_task(process_ask_queue(server_id))
+            if 'ask' not in AVERAGE_TIMES:
+                AVERAGE_TIMES['ask'] = 10.0
+
+            wait_time = calculate_estimated_wait(position, "ask")
+            wait_str = f"\n⏱️ Estimated wait: {format_time(wait_time)}" if wait_time > 0 else ""
+
+            # Update message if we're not first in queue
+            if position > 1 or ask_queue['currently_processing']:
+                await queue_item.status_message.edit(
+                    content=f"📍 **Question queued**\nPrompt: `{prompt}`\nPosition {position} in queue{wait_str}"
+                )
+                
+        if not ask_queue['currently_processing']:
+            asyncio.create_task(process_ask_queue(server_id))
+            
+    except Exception as e:
+        print(f"❌ Error in ask command: {e}")
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    f"❌ **Error processing command**\nSorry, there was an issue processing your request. Please try `/ask_simple {prompt}` instead.",
+                    ephemeral=False
+                )
+            else:
+                await interaction.followup.send(
+                    f"❌ **Error processing command**\nSorry, there was an issue processing your request. Please try `/ask_simple {prompt}` instead."
+                )
+        except:
+            print("Failed to send error message")
 
 @bot.tree.command(name="ask_simple", description="Ask a question without plugins (more reliable)")
 @app_commands.describe(prompt="Your question or request")
@@ -2183,30 +2201,35 @@ async def simple_ask_command_multi_server(interaction: discord.Interaction, prom
     """Simple ask command without plugins for maximum reliability."""
     await interaction.response.defer(ephemeral=False)
     
-    # Build payload with model auto-detection
-    model = await get_lm_studio_model()
-    payload = build_lm_studio_payload(
-        messages=[
-            {
-                "role": "system",
-                "content": f"You are DuckBot, a helpful AI assistant. The user is {interaction.user.display_name}. Be concise and helpful."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.7,
-        max_tokens=500,
-        model=model
-    )
+    # Build payload - respect LM Studio's system prompt if configured
+    messages = []
+    
+    if not USE_LM_STUDIO_SYSTEM_PROMPT:
+        # Use bot's simple system prompt
+        messages.append({
+            "role": "system",
+            "content": f"You are DuckBot, a helpful AI assistant. The user is {interaction.user.display_name}. Be concise and helpful."
+        })
+    
+    # Add user message with context
+    messages.append({
+        "role": "user",
+        "content": f"[User: {interaction.user.display_name}] {prompt}"
+    })
+    
+    payload = {
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": 500,
+        "stream": False
+    }
     
     try:
         response = requests.post(
             LM_STUDIO_URL,
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
-            timeout=30
+            timeout=180
         )
         
         if response.status_code == 200:
